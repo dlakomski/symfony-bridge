@@ -5,7 +5,7 @@ namespace SimpleBus\SymfonyBridge\Tests\Functional;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Tools\SchemaTool;
-use LogicException;
+use PHPUnit\Framework\Attributes\Test;
 use SimpleBus\Message\Bus\MessageBus;
 use SimpleBus\SymfonyBridge\Tests\Functional\SmokeTest\DoctrineTestKernel;
 use SimpleBus\SymfonyBridge\Tests\Functional\SmokeTest\SomeOtherEventSubscriber;
@@ -25,20 +25,11 @@ class DoctrineOrmSmokeTest extends KernelTestCase
         static::$class = null;
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itHandlesACommandThenDispatchesEventsForAllModifiedEntities(): void
     {
-        if (!class_exists('Symfony\Bridge\ProxyManager\LazyProxy\Instantiator\RuntimeInstantiator')) {
-            $this->markTestSkipped('This test requires "symfony/proxy-manager-bridge" to be installed.');
-
-            // @phpstan-ignore-next-line
-            return;
-        }
-
         self::bootKernel(['environment' => 'config1']);
-        $container = self::$kernel->getContainer();
+        $container = self::getContainer();
 
         $this->createSchema($container);
 
@@ -77,24 +68,6 @@ class DoctrineOrmSmokeTest extends KernelTestCase
         $this->assertStringContainsString('event_bus.DEBUG: Finished notifying a subscriber', $loggedMessages);
     }
 
-    /**
-     * @test
-     */
-    public function failsBecauseOfMisingDependency(): void
-    {
-        if (class_exists('Symfony\Bridge\ProxyManager\LazyProxy\Instantiator\RuntimeInstantiator')) {
-            $this->markTestSkipped('This test requires "symfony/proxy-manager-bridge" to NOT be installed.');
-
-            // @phpstan-ignore-next-line
-            return;
-        }
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('In order to use bundle "DoctrineOrmBridgeBundle" you need to require "symfony/proxy-manager-bridge" package.');
-
-        self::bootKernel(['environment' => 'config2']);
-    }
-
     protected static function getKernelClass(): string
     {
         return DoctrineTestKernel::class;
@@ -105,7 +78,7 @@ class DoctrineOrmSmokeTest extends KernelTestCase
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine.orm.entity_manager');
 
-        /** @var array<int, ClassMetadata<object>> $metadata */
+        /** @var list<ClassMetadata<object>> $metadata */
         $metadata = $entityManager->getMetadataFactory()->getAllMetadata();
 
         $schemaTool = new SchemaTool($entityManager);
